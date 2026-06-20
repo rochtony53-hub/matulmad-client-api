@@ -34,7 +34,7 @@ router.post('/', async (req, res) => {
     });
 
     // 3) URL WebView (le backend client proxy le statut ; voir GET /:id/status)
-    const webviewUrl = `${PAYMENT_BASE()}/?order=${core.id}&client=${order._id}`;
+    const webviewUrl = `${PAYMENT_BASE()}/?order=${core.id}&token=${encodeURIComponent(process.env.CORE_API_TOKEN||"")}&client=${order._id}`;
 
     return res.json({
       ok: true,

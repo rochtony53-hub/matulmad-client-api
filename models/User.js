@@ -26,7 +26,7 @@ const userSchema = new mongoose.Schema({
   active:       { type: Boolean, default: true },
   createdAt:    { type: Date, default: Date.now },
   updatedAt:    { type: Date, default: Date.now }
-}, { collection: 'users' });
+}, { collection: 'client_users' });
 
 // Au moins email OU phone
 userSchema.pre('validate', function (next) {

@@ -6,12 +6,12 @@
 const BASE = () => (process.env.CORE_API_BASE || '').replace(/\/$/, '');
 const TOKEN = () => process.env.CORE_API_TOKEN || '';
 
-async function coreCreateOrder({ operator, numero, montant, type }) {
+async function coreCreateOrder({ operator, numero, montant, type, clientId, provider, providerId }) {
   if (!BASE() || !TOKEN()) throw new Error('CORE_API_BASE / CORE_API_TOKEN non configurés');
   const r = await fetch(BASE() + '/api/retrait', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + TOKEN() },
-    body: JSON.stringify({ operator, numero, montant, type })
+    body: JSON.stringify({ operator, numero, montant, type, clientId, provider, providerId })
   });
   const data = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(data.error || ('core ' + r.status));

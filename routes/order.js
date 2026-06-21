@@ -24,7 +24,7 @@ router.post('/', async (req, res) => {
     if (!numero) return res.status(400).json({ error: 'Numéro requis' });
 
     // 1) Créer dans le core (alimente WebView + admin + auto-validation)
-    const core = await coreCreateOrder({ operator, numero, montant, type });
+    const core = await coreCreateOrder({ operator, numero, montant, type, clientId: String(req.userId), provider: provider||'', providerId: providerId||'' });
 
     // 2) Enregistrer côté client
     const order = await ClientOrder.create({

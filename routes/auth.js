@@ -19,16 +19,27 @@ const cleanPhone = (v) => (v || '').replace(/[\s.\-]/g, '');
 function publicUser(u) {
   return {
     id: u._id, name: u.name, email: u.email || null, phone: u.phone || null,
+    // FIX: adresse/pays/coordonnees visibles ao amin'ny profile client
+    country: u.country || 'Madagascar',
+    address: u.address || '',
+    addressLat: u.addressLat ?? null,
+    addressLng: u.addressLng ?? null,
     wallets: u.wallets, providers: u.providers, lang: u.lang, role: u.role
   };
 }
 
-// POST /api/auth/register  { name, email?, phone?, password }
+// POST /api/auth/register  { name, email?, phone?, password, confirmPassword,
+//   country?, address?, addressLat?, addressLng? }
 router.post('/register', async (req, res) => {
   try {
-    let { name, email, phone, password, lang } = req.body || {};
+    let { name, email, phone, password, confirmPassword, lang,
+          country, address, addressLat, addressLng } = req.body || {};
     if (!password || password.length < 6)
       return res.status(400).json({ error: 'Mot de passe trop court (min 6)' });
+    // FIX: confirmation mot de passe -- verifiee cote serveur aussi
+    if (confirmPassword !== undefined && password !== confirmPassword)
+      return res.status(400).json({ error: 'Les mots de passe ne correspondent pas' });
+
     email = (email || '').toLowerCase().trim() || undefined;
     phone = cleanPhone(phone) || undefined;
     if (!email && !phone) return res.status(400).json({ error: 'Email ou téléphone requis' });
@@ -42,7 +53,14 @@ router.post('/register', async (req, res) => {
     if (exists) return res.status(409).json({ error: 'Compte déjà existant' });
 
     const passwordHash = await bcrypt.hash(password, 10);
-    const u = await User.create({ name: name || '', email, phone, passwordHash, lang: lang === 'mg' ? 'mg' : 'fr' });
+    const u = await User.create({
+      name: name || '', email, phone, passwordHash,
+      lang: lang === 'mg' ? 'mg' : 'fr',
+      country: (country === 'Maroc') ? 'Maroc' : 'Madagascar',
+      address: address || '',
+      addressLat: (typeof addressLat === 'number') ? addressLat : null,
+      addressLng: (typeof addressLng === 'number') ? addressLng : null
+    });
     return res.json({ ok: true, token: sign(u), user: publicUser(u) });
   } catch (e) {
     return res.status(500).json({ error: e.message });

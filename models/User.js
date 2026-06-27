@@ -19,6 +19,11 @@ const userSchema = new mongoose.Schema({
   email:        { type: String, lowercase: true, trim: true, sparse: true, index: true },
   phone:        { type: String, trim: true, sparse: true, index: true },
   passwordHash: { type: String, required: true },
+  // FIX: Adresse + Pays + coordonnees GPS (Point exact via Maps)
+  country:      { type: String, enum: ['Madagascar','Maroc'], default: 'Madagascar' },
+  address:      { type: String, default: '' },
+  addressLat:   { type: Number, default: null },
+  addressLng:   { type: Number, default: null },
   wallets:      { type: [walletSchema],   default: [] },
   providers:    { type: [providerSchema], default: [] },
   lang:         { type: String, enum: ['fr', 'mg'], default: 'fr' },

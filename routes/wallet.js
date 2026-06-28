@@ -44,11 +44,11 @@ router.delete('/:id', async (req, res) => {
 // POST /api/wallet/provider  { name, accountId, label? }
 router.post('/provider', async (req, res) => {
   try {
-    const { name, accountId, label } = req.body || {};
+    const { name, accountId, label, email } = req.body || {};
     if (!name || !accountId) return res.status(400).json({ error: 'Nom et identifiant requis' });
     const u = await User.findById(req.userId);
     if (!u) return res.status(404).json({ error: 'Utilisateur introuvable' });
-    u.providers.push({ name, accountId, label: label || '' });
+    u.providers.push({ name, accountId, label: label || '', email: email || '' });
     u.updatedAt = new Date();
     await u.save();
     return res.json({ ok: true, providers: u.providers });

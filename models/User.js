@@ -11,7 +11,8 @@ const walletSchema = new mongoose.Schema({
 const providerSchema = new mongoose.Schema({
   name:      { type: String, required: true },   // ex: "Deriv"
   accountId: { type: String, required: true },   // ID fournisseur (CR...)
-  label:     { type: String, default: '' }
+  label:     { type: String, default: '' },
+  email:     { type: String, default: '' }
 }, { _id: true });
 
 const userSchema = new mongoose.Schema({

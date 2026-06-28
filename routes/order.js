@@ -8,6 +8,26 @@ router.use(auth);
 
 const PAYMENT_BASE = () => (process.env.PAYMENT_WEBVIEW_BASE || 'https://payment-webview.vercel.app').replace(/\/$/, '');
 
+const FINAL = ['success', 'failed'];
+
+// Synchronise un ordre client depuis le core (statut + session + n° passerelle).
+// Renvoie true si quelque chose a changé.
+async function syncFromCore(order) {
+  if (!order || !order.coreOrderId || FINAL.includes(order.status)) return false;
+  try {
+    const core = await coreGetOrder(order.coreOrderId);
+    if (!core) return false;
+    let changed = false;
+    if (core.status && core.status !== order.status) { order.status = core.status; changed = true; }
+    const sess = core.session || core.sessionId || core.session_id || '';
+    if (sess && sess !== order.session) { order.session = sess; changed = true; }
+    const gw = core.gatewayNumero || core.gateway || '';
+    if (gw && gw !== order.gatewayNumero) { order.gatewayNumero = gw; changed = true; }
+    if (changed) { order.updatedAt = new Date(); await order.save(); }
+    return changed;
+  } catch (_) { return false; } // core indisponible : on garde le dernier statut connu
+}
+
 // POST /api/order  { type, operator, montant, numero, provider?, providerId? }
 // → crée l'ordre dans le backend core, enregistre l'ordre client, renvoie l'URL WebView.
 router.post('/', async (req, res) => {
@@ -49,10 +69,15 @@ router.post('/', async (req, res) => {
   }
 });
 
-// GET /api/order  → historique du client
+// GET /api/order  → historique du client (avec sync auto des ordres non finalisés)
 router.get('/', async (req, res) => {
   try {
     const list = await ClientOrder.find({ userId: req.userId }).sort({ createdAt: -1 }).limit(50);
+    // Sync depuis le core uniquement les ordres encore en cours (pending/processing)
+    const pending = list.filter(o => o.coreOrderId && !FINAL.includes(o.status));
+    if (pending.length) {
+      await Promise.all(pending.map(o => syncFromCore(o).catch(() => false)));
+    }
     return res.json({ data: list });
   } catch (e) { return res.status(500).json({ error: e.message }); }
 });
@@ -62,15 +87,8 @@ router.get('/:id/status', async (req, res) => {
   try {
     const order = await ClientOrder.findOne({ _id: req.params.id, userId: req.userId });
     if (!order) return res.status(404).json({ error: 'Ordre introuvable' });
-    if (order.coreOrderId) {
-      try {
-        const core = await coreGetOrder(order.coreOrderId);
-        if (core && core.status && core.status !== order.status) {
-          order.status = core.status; order.updatedAt = new Date(); await order.save();
-        }
-      } catch (_) { /* core indisponible : on renvoie le dernier statut connu */ }
-    }
-    return res.json({ status: order.status, montant: order.montant, type: order.type });
+    await syncFromCore(order);
+    return res.json({ status: order.status, montant: order.montant, type: order.type, session: order.session, ussdCode: order.ussdCode });
   } catch (e) { return res.status(500).json({ error: e.message }); }
 });
 

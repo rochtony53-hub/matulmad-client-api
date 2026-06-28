@@ -56,7 +56,7 @@ router.post('/register', async (req, res) => {
     const u = await User.create({
       name: name || '', email, phone, passwordHash,
       lang: lang === 'mg' ? 'mg' : 'fr',
-      country: (country === 'Maroc') ? 'Maroc' : 'Madagascar',
+      country: (typeof country === 'string' && country.trim()) ? country.trim() : 'Madagascar',
       address: address || '',
       addressLat: (typeof addressLat === 'number') ? addressLat : null,
       addressLng: (typeof addressLng === 'number') ? addressLng : null
@@ -99,14 +99,33 @@ router.get('/me', auth, async (req, res) => {
   }
 });
 
-// PATCH /api/auth/me  { name?, lang? }
+// PATCH /api/auth/me  { name?, email?, phone?, country?, address?, lang? }
 router.patch('/me', auth, async (req, res) => {
   try {
-    const { name, lang } = req.body || {};
+    const { name, email, phone, country, address, lang } = req.body || {};
     const upd = { updatedAt: new Date() };
-    if (typeof name === 'string') upd.name = name;
+    if (typeof name === 'string') upd.name = name.trim();
+    if (typeof country === 'string') upd.country = country.trim();
+    if (typeof address === 'string') upd.address = address.trim();
     if (lang === 'fr' || lang === 'mg') upd.lang = lang;
-    const u = await User.findByIdAndUpdate(req.userId, upd, { new: true });
+    if (typeof email === 'string') {
+      const e = email.toLowerCase().trim();
+      if (e && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) return res.status(400).json({ error: 'Email invalide' });
+      if (e) {
+        const dup = await User.findOne({ email: e, _id: { $ne: req.userId } });
+        if (dup) return res.status(409).json({ error: 'Email déjà utilisé' });
+      }
+      upd.email = e || undefined;
+    }
+    if (typeof phone === 'string') {
+      const p = phone.replace(/[\s.\-]/g, '');
+      if (p) {
+        const dup = await User.findOne({ phone: p, _id: { $ne: req.userId } });
+        if (dup) return res.status(409).json({ error: 'Téléphone déjà utilisé' });
+      }
+      upd.phone = p || undefined;
+    }
+    const u = await User.findByIdAndUpdate(req.userId, upd, { new: true, runValidators: true });
     return res.json({ ok: true, user: publicUser(u) });
   } catch (e) {
     return res.status(500).json({ error: e.message });

@@ -20,7 +20,7 @@ const userSchema = new mongoose.Schema({
   phone:        { type: String, trim: true, sparse: true, index: true },
   passwordHash: { type: String, required: true },
   // FIX: Adresse + Pays + coordonnees GPS (Point exact via Maps)
-  country:      { type: String, enum: ['Madagascar','Maroc'], default: 'Madagascar' },
+  country:      { type: String, default: 'Madagascar' },
   address:      { type: String, default: '' },
   addressLat:   { type: Number, default: null },
   addressLng:   { type: Number, default: null },
